@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reddit Engagement Assistant</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Reddit Engagement Assistant</h1>
+    <nav class="tabs">
+      <button class="tab active" data-tab="queue">Queue</button>
+      <button class="tab" data-tab="history">History</button>
+      <button class="tab" data-tab="status">Status</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="tab-queue" class="tab-panel active">
+      <div class="toolbar">
+        <button id="refresh-queue">Refresh</button>
+        <span id="queue-count" class="muted"></span>
+      </div>
+      <div id="queue-list"></div>
+      <p id="queue-empty" class="empty hidden">No drafts ready. Try Status → Poll Now.</p>
+    </section>
+
+    <section id="tab-history" class="tab-panel">
+      <table id="history-table">
+        <thead>
+          <tr><th>Date</th><th>Subreddit</th><th>Thread</th><th>Comment</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p id="history-empty" class="empty hidden">No posted comments yet.</p>
+    </section>
+
+    <section id="tab-status" class="tab-panel">
+      <div class="status-grid">
+        <div class="stat"><label>Last poll</label><span id="stat-last"></span></div>
+        <div class="stat"><label>Next poll</label><span id="stat-next"></span></div>
+        <div class="stat"><label>Queue</label><span id="stat-queue"></span></div>
+        <div class="stat"><label>Pending</label><span id="stat-pending"></span></div>
+        <div class="stat"><label>Failed</label><span id="stat-failed"></span></div>
+        <div class="stat"><label>Posted (total)</label><span id="stat-posted"></span></div>
+        <div class="stat"><label>Scoring calls (24h)</label><span id="stat-scoring"></span></div>
+        <div class="stat"><label>Drafting calls (24h)</label><span id="stat-drafting"></span></div>
+        <div class="stat"><label>Est. cost (24h)</label><span id="stat-cost"></span></div>
+      </div>
+      <button id="poll-now">Poll Now</button>
+      <p id="poll-result" class="muted"></p>
+      <h3>Recent failures</h3>
+      <ul id="failure-list" class="failures"></ul>
+    </section>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

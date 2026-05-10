@@ -1,0 +1,141 @@
+:root {
+  --bg: #f7f7f5;
+  --fg: #1c1c1c;
+  --muted: #666;
+  --border: #d4d4d2;
+  --card-bg: #ffffff;
+  --primary: #2b6cb0;
+  --primary-fg: #ffffff;
+  --green: #22a06b;
+  --yellow: #d97706;
+  --gray: #888;
+  --orange: #ea580c;
+  --danger: #c0392b;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card-bg);
+}
+header h1 { margin: 0 0 12px 0; font-size: 18px; font-weight: 600; }
+
+.tabs { display: flex; gap: 4px; }
+.tab {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--muted);
+  border-radius: 6px;
+}
+.tab:hover { color: var(--fg); background: rgba(0,0,0,0.04); }
+.tab.active { color: var(--fg); background: var(--bg); border-color: var(--border); }
+
+main { max-width: 880px; margin: 24px auto; padding: 0 24px; }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.toolbar button { padding: 6px 12px; cursor: pointer; }
+.muted { color: var(--muted); font-size: 13px; }
+.empty { color: var(--muted); padding: 32px; text-align: center; }
+.hidden { display: none; }
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  transition: opacity 0.3s ease;
+}
+.card.fading { opacity: 0; }
+.card-header { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #eee;
+  color: var(--fg);
+}
+.badge.subreddit { background: #e6f0fb; color: #1d4e89; }
+.badge.score-green  { background: var(--green);  color: white; }
+.badge.score-yellow { background: var(--yellow); color: white; }
+.badge.score-gray   { background: var(--gray);   color: white; }
+.badge.warning      { background: var(--orange); color: white; }
+.meta { color: var(--muted); font-size: 12px; }
+
+.title { font-weight: 600; margin: 6px 0; }
+.body-preview { color: #444; margin: 4px 0 8px 0; }
+.thread-link {
+  display: inline-block;
+  color: var(--primary);
+  text-decoration: none;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.thread-link:hover { text-decoration: underline; }
+
+.scoring-context {
+  background: #fafaf8;
+  border-left: 3px solid var(--border);
+  padding: 8px 12px;
+  margin: 12px 0;
+  font-size: 13px;
+}
+.scoring-context label { font-weight: 600; color: var(--muted); display: block; font-size: 11px; text-transform: uppercase; }
+
+.draft-textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+.char-count { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+.actions { display: flex; gap: 8px; margin-top: 12px; }
+.actions button { padding: 8px 14px; cursor: pointer; border-radius: 6px; border: 1px solid var(--border); background: white; }
+.actions button.primary { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+.actions button.primary:hover { background: #1e5283; }
+.actions button:disabled { opacity: 0.5; cursor: wait; }
+
+#history-table { width: 100%; border-collapse: collapse; }
+#history-table th, #history-table td {
+  text-align: left; padding: 8px; border-bottom: 1px solid var(--border); font-size: 13px;
+}
+#history-table th { color: var(--muted); font-weight: 600; }
+#history-table .comment-cell { max-width: 400px; color: #333; }
+
+.status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+}
+.stat label { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; margin-bottom: 4px; }
+.stat span { font-size: 18px; font-weight: 600; }
+
+#poll-now { padding: 8px 16px; cursor: pointer; }
+#poll-result { margin-left: 12px; display: inline; }
+
+.failures { padding: 0; list-style: none; }
+.failures li { background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 8px; font-size: 13px; }
+.failures .err { color: var(--danger); font-family: monospace; font-size: 12px; }
