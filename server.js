@@ -78,6 +78,50 @@ app.get('/api/history', (req, res) => {
   res.json(rows);
 });
 
+app.post('/api/approve', (req, res) => {
+  const { thread_id, final_text } = req.body || {};
+  if (!thread_id || typeof final_text !== 'string') {
+    return res.status(400).json({ error: 'thread_id and final_text required' });
+  }
+  const thread = db.getThreadById(thread_id);
+  if (!thread) return res.status(404).json({ error: 'thread not found' });
+
+  db.insertPosted({
+    thread_id,
+    subreddit: thread.subreddit,
+    thread_title: thread.title,
+    thread_url: thread.url,
+    final_text,
+    posted_at: Date.now()
+  });
+  db.updateThreadStatus(thread_id, 'approved');
+  res.json({ ok: true });
+});
+
+app.post('/api/skip', (req, res) => {
+  const { thread_id } = req.body || {};
+  if (!thread_id) return res.status(400).json({ error: 'thread_id required' });
+  if (!db.getThreadById(thread_id)) return res.status(404).json({ error: 'thread not found' });
+  db.updateThreadStatus(thread_id, 'skipped');
+  res.json({ ok: true });
+});
+
+app.post('/api/regenerate', async (req, res) => {
+  const { thread_id } = req.body || {};
+  if (!thread_id) return res.status(400).json({ error: 'thread_id required' });
+  const thread = db.getThreadById(thread_id);
+  if (!thread) return res.status(404).json({ error: 'thread not found' });
+
+  // Reset thread to 'scored' so drafter will run, clear any stale attempts.
+  db.updateThreadStatus(thread_id, 'scored');
+  try {
+    const { draftText } = await drafter.draftComment(thread_id);
+    res.json({ ok: true, draft_text: draftText });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(config.port, () => {
   console.log(`[server] listening on http://localhost:${config.port}`);
 });
