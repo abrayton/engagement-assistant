@@ -117,7 +117,36 @@ export function createDb(dbPath) {
         last_error = ?,
         status = ?
       WHERE id = ?
-    `)
+    `),
+    insertDraft: db.prepare(`
+      INSERT INTO drafts (thread_id, draft_text, created_at)
+      VALUES (?, ?, ?)
+    `),
+    getLatestDraft: db.prepare(`
+      SELECT * FROM drafts WHERE thread_id = ?
+      ORDER BY created_at DESC, id DESC LIMIT 1
+    `),
+    deleteDraftsForThread: db.prepare('DELETE FROM drafts WHERE thread_id = ?'),
+    insertPosted: db.prepare(`
+      INSERT INTO posted (thread_id, subreddit, thread_title, thread_url, final_text, posted_at)
+      VALUES (@thread_id, @subreddit, @thread_title, @thread_url, @final_text, @posted_at)
+    `),
+    getRecentPosted: db.prepare('SELECT * FROM posted ORDER BY posted_at DESC LIMIT ?'),
+    insertCycleLog: db.prepare(`
+      INSERT INTO cycle_log (
+        started_at, finished_at, threads_fetched, threads_inserted,
+        scoring_calls, drafting_calls, errors
+      ) VALUES (
+        @started_at, @finished_at, @threads_fetched, @threads_inserted,
+        @scoring_calls, @drafting_calls, @errors
+      )
+    `),
+    getLastCycleLog: db.prepare('SELECT * FROM cycle_log ORDER BY id DESC LIMIT 1'),
+    logApiCall: db.prepare(`
+      INSERT INTO api_call_log (called_at, module, model, thread_id, input_tokens, output_tokens, success)
+      VALUES (@called_at, @module, @model, @thread_id, @input_tokens, @output_tokens, @success)
+    `),
+    getApiCallsSince: db.prepare('SELECT * FROM api_call_log WHERE called_at >= ?')
   };
 
   return {
@@ -134,6 +163,17 @@ export function createDb(dbPath) {
     incrementAttempts(id, errorMessage, newStatus) {
       stmts.incrementAttempts.run(errorMessage, newStatus, id);
     },
+    insertDraft(threadId, text) {
+      stmts.insertDraft.run(threadId, text, Date.now());
+    },
+    getLatestDraft(threadId) { return stmts.getLatestDraft.get(threadId); },
+    deleteDraftsForThread(threadId) { stmts.deleteDraftsForThread.run(threadId); },
+    insertPosted(row) { stmts.insertPosted.run(row); },
+    getRecentPosted(limit) { return stmts.getRecentPosted.all(limit); },
+    insertCycleLog(row) { stmts.insertCycleLog.run(row); },
+    getLastCycleLog() { return stmts.getLastCycleLog.get(); },
+    logApiCall(row) { stmts.logApiCall.run(row); },
+    getApiCallsSince(timestamp) { return stmts.getApiCallsSince.all(timestamp); },
     close() { db.close(); }
   };
 }

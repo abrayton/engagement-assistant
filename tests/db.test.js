@@ -131,3 +131,68 @@ describe('threads — pipeline queries and updates', () => {
     expect(pending.map((r) => r.id)).toEqual(['t3_b']);
   });
 });
+
+describe('drafts and posted', () => {
+  let db;
+  beforeEach(() => {
+    db = makeDb();
+    db.insertThread({
+      id: 't3_a', subreddit: 'webdev', title: 't', body: '', url: 'u',
+      author: 'x', score: 1, comment_count: 0, created_utc: 0,
+      fetched_at: 0, age_hours: 0, matched_strong: '[]', matched_weak: '[]'
+    });
+  });
+
+  it('insertDraft + getLatestDraft round-trip', () => {
+    db.insertDraft('t3_a', 'first draft');
+    db.insertDraft('t3_a', 'second draft');
+    const latest = db.getLatestDraft('t3_a');
+    expect(latest.draft_text).toBe('second draft');
+  });
+
+  it('deleteDraftsForThread clears prior drafts', () => {
+    db.insertDraft('t3_a', 'first');
+    db.deleteDraftsForThread('t3_a');
+    expect(db.getLatestDraft('t3_a')).toBeUndefined();
+  });
+
+  it('insertPosted + getRecentPosted', () => {
+    db.insertPosted({
+      thread_id: 't3_a', subreddit: 'webdev', thread_title: 't',
+      thread_url: 'u', final_text: 'hello', posted_at: 1700000000
+    });
+    const recent = db.getRecentPosted(10);
+    expect(recent.length).toBe(1);
+    expect(recent[0].final_text).toBe('hello');
+  });
+});
+
+describe('cycle_log and api_call_log', () => {
+  let db;
+  beforeEach(() => { db = makeDb(); });
+
+  it('insertCycleLog stores a row', () => {
+    db.insertCycleLog({
+      started_at: 1, finished_at: 2,
+      threads_fetched: 5, threads_inserted: 2,
+      scoring_calls: 1, drafting_calls: 1, errors: 0
+    });
+    const last = db.getLastCycleLog();
+    expect(last.threads_fetched).toBe(5);
+  });
+
+  it('logApiCall stores a row and getApiCallsSince filters by time', () => {
+    db.logApiCall({
+      called_at: 100, module: 'scorer', model: 'm', thread_id: 't3_a',
+      input_tokens: 50, output_tokens: 20, success: 1
+    });
+    db.logApiCall({
+      called_at: 50, module: 'drafter', model: 'm', thread_id: 't3_a',
+      input_tokens: 200, output_tokens: 80, success: 1
+    });
+    const sinceTime = 75;
+    const calls = db.getApiCallsSince(sinceTime);
+    expect(calls.length).toBe(1);
+    expect(calls[0].module).toBe('scorer');
+  });
+});
