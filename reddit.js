@@ -3,11 +3,11 @@ import { matchKeywords, passesGate } from './keywords.js';
 
 export function createSnoowrapClient(env) {
   return new Snoowrap({
-    userAgent: env.REDDIT_USER_AGENT,
-    clientId: env.REDDIT_CLIENT_ID,
-    clientSecret: env.REDDIT_CLIENT_SECRET,
-    username: env.REDDIT_USERNAME,
-    password: env.REDDIT_PASSWORD
+    userAgent: env.REDDIT_USER_AGENT || 'reddit-assistant/1.0',
+    clientId: env.REDDIT_CLIENT_ID || '',
+    clientSecret: env.REDDIT_CLIENT_SECRET || '',
+    username: env.REDDIT_USERNAME || '',
+    password: env.REDDIT_PASSWORD || ''
   });
 }
 
