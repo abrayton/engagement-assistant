@@ -104,8 +104,104 @@ function escapeHtml(s) {
     .replace(/'/g, '&#39;');
 }
 
-// Stub — implemented in Task 22
-function attachCardActions(card, row) { /* filled in next task */ }
+function attachCardActions(card, row) {
+  const textarea = card.querySelector('.draft-textarea');
+  const copyBtn = card.querySelector('.copy-open');
+  const regenBtn = card.querySelector('.regenerate');
+  const skipBtn = card.querySelector('.skip');
+
+  let copied = false;
+
+  copyBtn.addEventListener('click', async () => {
+    if (!copied) {
+      // Single click handler — both clipboard write AND window.open before any await
+      // (avoids popup blocker by keeping window.open synchronous to the click).
+      const text = textarea.value;
+      window.open(row.url, '_blank', 'noopener');
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (err) {
+        // Some browsers may block clipboard if window.open fired first; warn user.
+        alert('Could not copy to clipboard: ' + err.message + '\nText is in the textarea — copy manually.');
+        return;
+      }
+      copyBtn.textContent = 'Mark as Posted';
+      copied = true;
+    } else {
+      // Mark as posted
+      copyBtn.disabled = true;
+      try {
+        const res = await fetch('/api/approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ thread_id: row.id, final_text: textarea.value })
+        });
+        if (!res.ok) throw new Error(`approve failed: ${res.status}`);
+        fadeAndRemove(card);
+      } catch (err) {
+        alert(err.message);
+        copyBtn.disabled = false;
+      }
+    }
+  });
+
+  regenBtn.addEventListener('click', async () => {
+    regenBtn.disabled = true;
+    const original = regenBtn.textContent;
+    regenBtn.textContent = 'Generating…';
+    try {
+      const res = await fetch('/api/regenerate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thread_id: row.id })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || 'regenerate failed');
+      }
+      const data = await res.json();
+      textarea.value = data.draft_text || '';
+      textarea.dispatchEvent(new Event('input'));
+      // Reset copied state since draft changed
+      copied = false;
+      copyBtn.textContent = 'Copy & Open Thread';
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      regenBtn.disabled = false;
+      regenBtn.textContent = original;
+    }
+  });
+
+  skipBtn.addEventListener('click', async () => {
+    if (!confirm('Skip this thread?')) return;
+    skipBtn.disabled = true;
+    try {
+      const res = await fetch('/api/skip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thread_id: row.id })
+      });
+      if (!res.ok) throw new Error('skip failed');
+      fadeAndRemove(card);
+    } catch (err) {
+      alert(err.message);
+      skipBtn.disabled = false;
+    }
+  });
+}
+
+function fadeAndRemove(card) {
+  card.classList.add('fading');
+  setTimeout(() => {
+    card.remove();
+    const list = document.getElementById('queue-list');
+    if (list.children.length === 0) {
+      document.getElementById('queue-empty').classList.remove('hidden');
+      document.getElementById('queue-count').textContent = '';
+    }
+  }, 300);
+}
 
 // Refresh button
 document.getElementById('refresh-queue').addEventListener('click', loadQueue);
