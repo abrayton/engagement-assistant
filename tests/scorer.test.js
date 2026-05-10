@@ -150,3 +150,45 @@ describe('createScorer.scoreThread', () => {
     expect(db.getThreadById('t3_e').status).toBe('scored');
   });
 });
+
+describe('createScorer — retry behavior', () => {
+  it('increments attempts and sets status=pending on first failure', async () => {
+    const db = createDb(':memory:');
+    db.insertThread({
+      id: 't3_x', subreddit: 'webdev', title: 't', body: '', url: 'u',
+      author: 'x', score: 1, comment_count: 5, created_utc: 0,
+      fetched_at: 0, age_hours: 1, matched_strong: '[]', matched_weak: '[]'
+    });
+    const anthropic = {
+      messages: { create: vi.fn().mockRejectedValue(new Error('500 server error')) }
+    };
+    const scorer = createScorer({ anthropic, db, config: fullConfig, personaPath });
+
+    await expect(scorer.scoreThread('t3_x')).rejects.toThrow('500 server error');
+    const got = db.getThreadById('t3_x');
+    expect(got.attempts).toBe(1);
+    expect(got.status).toBe('pending');
+    expect(got.last_error).toMatch(/500/);
+  });
+
+  it('marks failed once attempts hit max_retry_attempts', async () => {
+    const db = createDb(':memory:');
+    db.insertThread({
+      id: 't3_y', subreddit: 'webdev', title: 't', body: '', url: 'u',
+      author: 'x', score: 1, comment_count: 5, created_utc: 0,
+      fetched_at: 0, age_hours: 1, matched_strong: '[]', matched_weak: '[]'
+    });
+    const anthropic = {
+      messages: { create: vi.fn().mockRejectedValue(new Error('boom')) }
+    };
+    const scorer = createScorer({ anthropic, db, config: fullConfig, personaPath });
+
+    await expect(scorer.scoreThread('t3_y')).rejects.toThrow();
+    await expect(scorer.scoreThread('t3_y')).rejects.toThrow();
+    await expect(scorer.scoreThread('t3_y')).rejects.toThrow();
+
+    const got = db.getThreadById('t3_y');
+    expect(got.attempts).toBe(3);
+    expect(got.status).toBe('failed');
+  });
+});
