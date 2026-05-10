@@ -68,6 +68,16 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+app.get('/api/queue', (req, res) => {
+  const rows = db.getDraftReadyQueue();
+  res.json(rows);
+});
+
+app.get('/api/history', (req, res) => {
+  const rows = db.getRecentPosted(50);
+  res.json(rows);
+});
+
 app.listen(config.port, () => {
   console.log(`[server] listening on http://localhost:${config.port}`);
 });
