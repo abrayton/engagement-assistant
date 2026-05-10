@@ -146,7 +146,31 @@ export function createDb(dbPath) {
       INSERT INTO api_call_log (called_at, module, model, thread_id, input_tokens, output_tokens, success)
       VALUES (@called_at, @module, @model, @thread_id, @input_tokens, @output_tokens, @success)
     `),
-    getApiCallsSince: db.prepare('SELECT * FROM api_call_log WHERE called_at >= ?')
+    getApiCallsSince: db.prepare('SELECT * FROM api_call_log WHERE called_at >= ?'),
+    getDraftReadyQueue: db.prepare(`
+      SELECT t.*,
+             d.draft_text,
+             d.created_at AS draft_created_at
+      FROM threads t
+      LEFT JOIN drafts d ON d.id = (
+        SELECT id FROM drafts WHERE thread_id = t.id
+        ORDER BY created_at DESC LIMIT 1
+      )
+      WHERE t.status = 'draft_ready'
+      ORDER BY t.relevance_score DESC, t.fetched_at DESC
+    `),
+    getStatusCounts: db.prepare(`
+      SELECT
+        (SELECT COUNT(*) FROM threads WHERE status = 'draft_ready') AS queue_count,
+        (SELECT COUNT(*) FROM threads WHERE status = 'pending')     AS pending_count,
+        (SELECT COUNT(*) FROM threads WHERE status = 'failed')      AS failed_count,
+        (SELECT COUNT(*) FROM posted)                               AS total_posted
+    `),
+    getRecentFailures: db.prepare(`
+      SELECT id, subreddit, title, url, last_error, attempts, fetched_at
+      FROM threads WHERE status = 'failed'
+      ORDER BY fetched_at DESC LIMIT ?
+    `)
   };
 
   return {
@@ -174,6 +198,9 @@ export function createDb(dbPath) {
     getLastCycleLog() { return stmts.getLastCycleLog.get(); },
     logApiCall(row) { stmts.logApiCall.run(row); },
     getApiCallsSince(timestamp) { return stmts.getApiCallsSince.all(timestamp); },
+    getDraftReadyQueue() { return stmts.getDraftReadyQueue.all(); },
+    getStatusCounts() { return stmts.getStatusCounts.get(); },
+    getRecentFailures(limit) { return stmts.getRecentFailures.all(limit); },
     close() { db.close(); }
   };
 }

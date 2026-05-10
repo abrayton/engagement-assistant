@@ -196,3 +196,67 @@ describe('cycle_log and api_call_log', () => {
     expect(calls[0].module).toBe('scorer');
   });
 });
+
+describe('composite queries', () => {
+  let db;
+  beforeEach(() => {
+    db = makeDb();
+    db.insertThread({
+      id: 't3_a', subreddit: 'webdev', title: 'first', body: 'body a', url: 'u1',
+      author: 'x', score: 5, comment_count: 3, created_utc: 0,
+      fetched_at: 100, age_hours: 1.0, matched_strong: '[]', matched_weak: '[]'
+    });
+    db.updateThreadAfterScoring('t3_a', {
+      raw_relevance_score: 9, relevance_score: 9,
+      relevance_reason: 'fits', suggested_angle: 'dry',
+      high_traffic_flag: 0, status: 'scored'
+    });
+    db.updateThreadStatus('t3_a', 'draft_ready');
+    db.insertDraft('t3_a', 'hello world');
+  });
+
+  it('getDraftReadyQueue joins thread and latest draft', () => {
+    const queue = db.getDraftReadyQueue();
+    expect(queue.length).toBe(1);
+    expect(queue[0].id).toBe('t3_a');
+    expect(queue[0].draft_text).toBe('hello world');
+    expect(queue[0].relevance_score).toBe(9);
+  });
+
+  it('getDraftReadyQueue is sorted by relevance_score DESC', () => {
+    db.insertThread({
+      id: 't3_b', subreddit: 'webdev', title: 'second', body: '', url: 'u2',
+      author: 'x', score: 5, comment_count: 3, created_utc: 0,
+      fetched_at: 200, age_hours: 1.0, matched_strong: '[]', matched_weak: '[]'
+    });
+    db.updateThreadAfterScoring('t3_b', {
+      raw_relevance_score: 10, relevance_score: 10,
+      relevance_reason: 'r', suggested_angle: 'a',
+      high_traffic_flag: 0, status: 'scored'
+    });
+    db.updateThreadStatus('t3_b', 'draft_ready');
+    db.insertDraft('t3_b', 'higher score draft');
+    const queue = db.getDraftReadyQueue();
+    expect(queue.map((r) => r.id)).toEqual(['t3_b', 't3_a']);
+  });
+
+  it('getStatusCounts reports queue/posted/pending/failed', () => {
+    const counts = db.getStatusCounts();
+    expect(counts.queue_count).toBe(1);
+    expect(counts.pending_count).toBe(0);
+    expect(counts.failed_count).toBe(0);
+    expect(counts.total_posted).toBe(0);
+  });
+
+  it('getRecentFailures returns failed threads with errors', () => {
+    db.insertThread({
+      id: 't3_c', subreddit: 'webdev', title: 'fails', body: '', url: 'u3',
+      author: 'x', score: 1, comment_count: 0, created_utc: 0,
+      fetched_at: 300, age_hours: 0, matched_strong: '[]', matched_weak: '[]'
+    });
+    db.incrementAttempts('t3_c', 'last error msg', 'failed');
+    const fails = db.getRecentFailures(5);
+    expect(fails.length).toBe(1);
+    expect(fails[0].last_error).toBe('last error msg');
+  });
+});
