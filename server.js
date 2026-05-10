@@ -33,6 +33,71 @@ const app = express();
 app.use(express.json());
 app.use(express.static(join(__dirname, 'public')));
 
+async function runPollCycle() {
+  if (pollInProgress) {
+    console.log('[cycle] skipped: previous cycle still running');
+    return { skipped: true };
+  }
+  pollInProgress = true;
+  const startedAt = Date.now();
+  let threadsFetched = 0, threadsInserted = 0;
+  let scoringCalls = 0, draftingCalls = 0, errors = 0;
+
+  try {
+    // 1. Poll new threads
+    const pollResult = await reddit.pollAllSubs();
+    threadsFetched = pollResult.threadsFetched;
+    threadsInserted = pollResult.threadsInserted;
+
+    // 2. Score every pending thread (new + retries)
+    const pending = db.getPending(config.max_retry_attempts);
+    for (const row of pending) {
+      try {
+        await scorer.scoreThread(row.id);
+        scoringCalls += 1;
+      } catch (err) {
+        errors += 1;
+        console.error(`[cycle] scoring failed for ${row.id}: ${err.message}`);
+      }
+    }
+
+    // 3. Draft for every scored thread (new + drafter retries)
+    const scored = db.getScored(config.max_retry_attempts);
+    for (const row of scored) {
+      try {
+        await drafter.draftComment(row.id);
+        draftingCalls += 1;
+      } catch (err) {
+        errors += 1;
+        console.error(`[cycle] drafting failed for ${row.id}: ${err.message}`);
+      }
+    }
+  } finally {
+    const finishedAt = Date.now();
+    db.insertCycleLog({
+      started_at: startedAt,
+      finished_at: finishedAt,
+      threads_fetched: threadsFetched,
+      threads_inserted: threadsInserted,
+      scoring_calls: scoringCalls,
+      drafting_calls: draftingCalls,
+      errors
+    });
+    lastPollAt = startedAt;
+    pollInProgress = false;
+    console.log(
+      `[cycle] done in ${finishedAt - startedAt}ms — fetched=${threadsFetched} ` +
+      `inserted=${threadsInserted} scored=${scoringCalls} drafted=${draftingCalls} errors=${errors}`
+    );
+  }
+  return { threads_found: threadsInserted, drafts_created: draftingCalls };
+}
+
+app.post('/api/poll', async (req, res) => {
+  const result = await runPollCycle();
+  res.json(result);
+});
+
 app.get('/api/status', (req, res) => {
   const counts = db.getStatusCounts();
   const lastCycle = db.getLastCycleLog();
@@ -121,6 +186,12 @@ app.post('/api/regenerate', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+const cronExpr = `*/${config.poll_interval_minutes} * * * *`;
+cron.schedule(cronExpr, () => {
+  runPollCycle().catch((err) => console.error('[cycle] unexpected error:', err));
+});
+console.log(`[server] cron scheduled: ${cronExpr}`);
 
 app.listen(config.port, () => {
   console.log(`[server] listening on http://localhost:${config.port}`);
