@@ -89,7 +89,35 @@ export function createDb(dbPath) {
         @created_utc, @fetched_at, @age_hours, @matched_strong, @matched_weak
       )
     `),
-    getThreadById: db.prepare('SELECT * FROM threads WHERE id = ?')
+    getThreadById: db.prepare('SELECT * FROM threads WHERE id = ?'),
+    getPending: db.prepare(`
+      SELECT * FROM threads
+      WHERE status = 'pending' AND attempts < ?
+      ORDER BY fetched_at ASC
+    `),
+    getScored: db.prepare(`
+      SELECT * FROM threads
+      WHERE status = 'scored' AND attempts < ?
+      ORDER BY relevance_score DESC, fetched_at ASC
+    `),
+    updateThreadAfterScoring: db.prepare(`
+      UPDATE threads SET
+        raw_relevance_score = @raw_relevance_score,
+        relevance_score = @relevance_score,
+        relevance_reason = @relevance_reason,
+        suggested_angle = @suggested_angle,
+        high_traffic_flag = @high_traffic_flag,
+        status = @status
+      WHERE id = @id
+    `),
+    updateThreadStatus: db.prepare('UPDATE threads SET status = ? WHERE id = ?'),
+    incrementAttempts: db.prepare(`
+      UPDATE threads SET
+        attempts = attempts + 1,
+        last_error = ?,
+        status = ?
+      WHERE id = ?
+    `)
   };
 
   return {
@@ -97,6 +125,15 @@ export function createDb(dbPath) {
     threadExists(id) { return !!stmts.threadExists.get(id); },
     insertThread(row) { stmts.insertThread.run(row); },
     getThreadById(id) { return stmts.getThreadById.get(id); },
+    getPending(maxAttempts) { return stmts.getPending.all(maxAttempts); },
+    getScored(maxAttempts) { return stmts.getScored.all(maxAttempts); },
+    updateThreadAfterScoring(id, fields) {
+      stmts.updateThreadAfterScoring.run({ id, ...fields });
+    },
+    updateThreadStatus(id, status) { stmts.updateThreadStatus.run(status, id); },
+    incrementAttempts(id, errorMessage, newStatus) {
+      stmts.incrementAttempts.run(errorMessage, newStatus, id);
+    },
     close() { db.close(); }
   };
 }
