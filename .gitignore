@@ -3,4 +3,5 @@ data/*
 !data/.gitkeep
 .env
 .vscode/
+.claude/
 *.log
