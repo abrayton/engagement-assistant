@@ -209,6 +209,91 @@ document.getElementById('refresh-queue').addEventListener('click', loadQueue);
 // Initial load
 loadQueue();
 
-// Stubs — implemented in Task 23
-function loadHistory() {}
-function loadStatus() {}
+async function loadHistory() {
+  const tbody = document.querySelector('#history-table tbody');
+  const empty = document.getElementById('history-empty');
+  tbody.innerHTML = '';
+  let rows;
+  try {
+    const res = await fetch('/api/history');
+    rows = await res.json();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="4">Error: ${escapeHtml(err.message)}</td></tr>`;
+    return;
+  }
+  if (rows.length === 0) {
+    empty.classList.remove('hidden');
+    document.getElementById('history-table').classList.add('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  document.getElementById('history-table').classList.remove('hidden');
+  rows.forEach((r) => {
+    const tr = document.createElement('tr');
+    const date = new Date(r.posted_at).toLocaleString();
+    tr.innerHTML = `
+      <td>${escapeHtml(date)}</td>
+      <td>r/${escapeHtml(r.subreddit)}</td>
+      <td><a href="${escapeHtml(r.thread_url)}" target="_blank" rel="noopener">${escapeHtml(r.thread_title)}</a></td>
+      <td class="comment-cell">${escapeHtml(r.final_text)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function loadStatus() {
+  let s;
+  try {
+    s = await (await fetch('/api/status')).json();
+  } catch (err) {
+    document.getElementById('poll-result').textContent = 'Error: ' + err.message;
+    return;
+  }
+  document.getElementById('stat-last').textContent = s.last_poll_at ? new Date(s.last_poll_at).toLocaleString() : '—';
+  document.getElementById('stat-next').textContent = s.next_poll_at ? new Date(s.next_poll_at).toLocaleString() : '—';
+  document.getElementById('stat-queue').textContent = s.queue_count;
+  document.getElementById('stat-pending').textContent = s.pending_count;
+  document.getElementById('stat-failed').textContent = s.failed_count;
+  document.getElementById('stat-posted').textContent = s.total_posted;
+  document.getElementById('stat-scoring').textContent = s.last_24h.scoring_calls;
+  document.getElementById('stat-drafting').textContent = s.last_24h.drafting_calls;
+  document.getElementById('stat-cost').textContent = '$' + s.last_24h.estimated_cost_usd.toFixed(3);
+
+  const fl = document.getElementById('failure-list');
+  fl.innerHTML = '';
+  if (s.recent_failures.length === 0) {
+    fl.innerHTML = '<li class="muted">No failures.</li>';
+  } else {
+    s.recent_failures.forEach((f) => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <strong>r/${escapeHtml(f.subreddit)}</strong> —
+        <a href="${escapeHtml(f.url)}" target="_blank" rel="noopener">${escapeHtml(f.title)}</a>
+        <span class="muted">(${f.attempts} attempts)</span>
+        <div class="err">${escapeHtml(f.last_error || '')}</div>
+      `;
+      fl.appendChild(li);
+    });
+  }
+}
+
+document.getElementById('poll-now').addEventListener('click', async () => {
+  const btn = document.getElementById('poll-now');
+  const result = document.getElementById('poll-result');
+  btn.disabled = true;
+  result.textContent = 'Polling…';
+  try {
+    const r = await fetch('/api/poll', { method: 'POST' });
+    const data = await r.json();
+    if (data.skipped) {
+      result.textContent = 'Skipped (cycle still running)';
+    } else {
+      result.textContent = `Done. ${data.threads_found ?? 0} threads inserted, ${data.drafts_created ?? 0} drafts created.`;
+    }
+    loadStatus();
+  } catch (err) {
+    result.textContent = 'Error: ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
