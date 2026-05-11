@@ -2,6 +2,8 @@ node_modules/
 data/*
 !data/.gitkeep
 .env
+persona.md
+config.json
 .vscode/
 .claude/
 docs/superpowers/

@@ -22,8 +22,8 @@ Local-only personal tool. Polls a configured list of online communities, scores 
      - Copy the **client ID** (under the app name) and **client secret** into `.env`.
      - Fill in `REDDIT_USERNAME` and `REDDIT_PASSWORD` for the same account.
    - **Anthropic API key** from https://console.anthropic.com → `ANTHROPIC_API_KEY`.
-5. Edit `persona.md` carefully. It controls every Claude call. Read your way through the voice rules and tone guidance and tune them to your account.
-6. Edit `config.json` if you want different communities, keywords, or thresholds. The defaults are a starting point.
+5. Copy `persona.example.md` → `persona.md` and fill it in carefully. It controls every Claude call. Walk through the voice rules and tone guidance and tune them to your account. (`persona.md` is gitignored — your voice stays local.)
+6. Copy `config.example.json` → `config.json` and edit it for your communities, keywords, and thresholds. The example values are a sensible starting point. (`config.json` is gitignored.)
 7. Run:
    ```
    npm start

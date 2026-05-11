@@ -1,0 +1,29 @@
+{
+  "subreddits": [
+    "SideProject", "indiehackers", "webdev"
+  ],
+  "keywords": {
+    "strong": [
+      "side project", "just shipped", "weekend project", "looking for feedback",
+      "roast my", "first users", "just launched"
+    ],
+    "weak": [
+      "made this", "I built"
+    ]
+  },
+  "poll_interval_minutes": 30,
+  "min_relevance_score": 7,
+  "max_thread_age_hours": 12,
+  "soft_comment_limit": 50,
+  "hard_comment_limit": 100,
+  "weak_gate_fresh_age_hours": 2,
+  "weak_gate_fresh_comment_count": 10,
+  "max_retry_attempts": 3,
+  "models": {
+    "scorer": "claude-haiku-4-5-20251001",
+    "drafter": "claude-sonnet-4-6"
+  },
+  "port": 3000,
+  "db_path": "data/assistant.db",
+  "persona_path": "persona.md"
+}
