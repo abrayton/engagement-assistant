@@ -1,6 +1,6 @@
 # Engagement Assistant
 
-Local-only personal tool. Polls target subreddits, scores threads with Claude Haiku, drafts comments with Claude Sonnet in the user's voice, lets the operator review/copy in a localhost web UI before manually posting.
+Local-only personal tool. Polls a configured list of online communities, scores threads with Claude Haiku, drafts comments with Claude Sonnet in the user's voice, lets the operator review/copy in a localhost web UI before manually posting.
 
 **Never auto-posts. The human is always in the loop.**
 
@@ -23,7 +23,7 @@ Local-only personal tool. Polls target subreddits, scores threads with Claude Ha
      - Fill in `REDDIT_USERNAME` and `REDDIT_PASSWORD` for the same account.
    - **Anthropic API key** from https://console.anthropic.com → `ANTHROPIC_API_KEY`.
 5. Edit `persona.md` carefully. It controls every Claude call. Read your way through the voice rules and tone guidance and tune them to your account.
-6. Edit `config.json` if you want different subreddits, keywords, or thresholds. The defaults are a starting point.
+6. Edit `config.json` if you want different communities, keywords, or thresholds. The defaults are a starting point.
 7. Run:
    ```
    npm start
@@ -55,13 +55,13 @@ npm test
 
 In PowerShell, use `npm.cmd test` if `npm test` is blocked by execution policy.
 
-Covers the gate logic, score penalty math, DB queries, and retry counter. Claude and Reddit calls are mocked.
+Covers the gate logic, score penalty math, DB queries, and retry counter. Claude and external API calls are mocked.
 
 ## Files
 
 - `server.js` — Express + cron scheduler
 - `db.js` — SQLite schema and queries
-- `reddit.js` — snoowrap polling
+- `reddit.js` — community polling client
 - `keywords.js` — tier matching and gate rule (pure)
 - `scorer.js` — Haiku scoring
 - `drafter.js` — Sonnet drafting
