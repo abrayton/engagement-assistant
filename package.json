@@ -1,7 +1,7 @@
 {
-  "name": "reddit-engagement-assistant",
+  "name": "engagement-assistant",
   "version": "1.0.0",
-  "description": "Local Reddit engagement assistant — poll, score, draft, review, copy.",
+  "description": "Local engagement assistant — poll, score, draft, review, copy.",
   "type": "module",
   "main": "server.js",
   "scripts": {

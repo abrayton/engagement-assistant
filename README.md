@@ -1,4 +1,4 @@
-# Reddit Engagement Assistant
+# Engagement Assistant
 
 Local-only personal tool. Polls target subreddits, scores threads with Claude Haiku, drafts comments with Claude Sonnet in the user's voice, lets the operator review/copy in a localhost web UI before manually posting.
 
