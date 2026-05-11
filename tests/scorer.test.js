@@ -191,4 +191,24 @@ describe('createScorer — retry behavior', () => {
     expect(got.attempts).toBe(3);
     expect(got.status).toBe('failed');
   });
+
+  it('persona read failure increments attempts and stays pending', async () => {
+    const db = createDb(':memory:');
+    db.insertThread({
+      id: 't3_missing_persona', subreddit: 'webdev', title: 't', body: '', url: 'u',
+      author: 'x', score: 1, comment_count: 5, created_utc: 0,
+      fetched_at: 0, age_hours: 1, matched_strong: '[]', matched_weak: '[]'
+    });
+    const anthropic = fakeAnthropic({ score: 8, reason: 'r', suggested_angle: 'a' });
+    const scorer = createScorer({
+      anthropic, db, config: fullConfig, personaPath: join(tmp, 'missing.md')
+    });
+
+    await expect(scorer.scoreThread('t3_missing_persona')).rejects.toThrow();
+    const got = db.getThreadById('t3_missing_persona');
+    expect(got.attempts).toBe(1);
+    expect(got.status).toBe('pending');
+    expect(got.last_error).toMatch(/^persona:/);
+    expect(anthropic.messages.create).not.toHaveBeenCalled();
+  });
 });

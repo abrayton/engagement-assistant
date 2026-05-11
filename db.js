@@ -118,6 +118,13 @@ export function createDb(dbPath) {
         status = ?
       WHERE id = ?
     `),
+    resetThreadForRegenerate: db.prepare(`
+      UPDATE threads SET
+        attempts = 0,
+        last_error = NULL,
+        status = 'scored'
+      WHERE id = ?
+    `),
     insertDraft: db.prepare(`
       INSERT INTO drafts (thread_id, draft_text, created_at)
       VALUES (?, ?, ?)
@@ -187,6 +194,7 @@ export function createDb(dbPath) {
     incrementAttempts(id, errorMessage, newStatus) {
       stmts.incrementAttempts.run(errorMessage, newStatus, id);
     },
+    resetThreadForRegenerate(id) { stmts.resetThreadForRegenerate.run(id); },
     insertDraft(threadId, text) {
       stmts.insertDraft.run(threadId, text, Date.now());
     },

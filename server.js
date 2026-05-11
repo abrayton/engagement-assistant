@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cron from 'node-cron';
-import { readFileSync } from 'fs';
+import { mkdirSync, readFileSync } from 'fs';
 import Anthropic from '@anthropic-ai/sdk';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -17,7 +17,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const config = JSON.parse(readFileSync(join(__dirname, 'config.json'), 'utf8'));
 const personaPath = join(__dirname, config.persona_path);
 
-const db = createDb(join(__dirname, config.db_path));
+const dbPath = join(__dirname, config.db_path);
+mkdirSync(dirname(dbPath), { recursive: true });
+const db = createDb(dbPath);
 
 const snoowrap = createSnoowrapClient(process.env);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -177,8 +179,7 @@ app.post('/api/regenerate', async (req, res) => {
   const thread = db.getThreadById(thread_id);
   if (!thread) return res.status(404).json({ error: 'thread not found' });
 
-  // Reset thread to 'scored' so drafter will run, clear any stale attempts.
-  db.updateThreadStatus(thread_id, 'scored');
+  db.resetThreadForRegenerate(thread_id);
   try {
     const { draftText } = await drafter.draftComment(thread_id);
     res.json({ ok: true, draft_text: draftText });
@@ -193,6 +194,6 @@ cron.schedule(cronExpr, () => {
 });
 console.log(`[server] cron scheduled: ${cronExpr}`);
 
-app.listen(config.port, () => {
-  console.log(`[server] listening on http://localhost:${config.port}`);
+app.listen(config.port, '127.0.0.1', () => {
+  console.log(`[server] listening on http://127.0.0.1:${config.port}`);
 });

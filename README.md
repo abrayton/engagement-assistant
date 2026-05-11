@@ -12,6 +12,7 @@ Local-only personal tool. Polls target subreddits, scores threads with Claude Ha
    ```
    npm install
    ```
+   In PowerShell, use `npm.cmd install` if script execution policy blocks `npm`.
 4. Copy `.env.example` → `.env` and fill in:
    - **Reddit credentials.** Go to https://reddit.com/prefs/apps logged in as your target account.
      - Click "create another app"
@@ -27,6 +28,7 @@ Local-only personal tool. Polls target subreddits, scores threads with Claude Ha
    ```
    npm start
    ```
+   PowerShell-safe alternatives: `npm.cmd start` or `node server.js`.
 8. Open http://localhost:3000.
 9. On the **Status** tab, click **Poll Now** for your first cycle. Cron will run every 30 minutes from then on (configurable in `config.json`).
 
@@ -50,6 +52,8 @@ The Status tab shows a 24-hour rolling estimate based on actual token usage. Pri
 ```
 npm test
 ```
+
+In PowerShell, use `npm.cmd test` if `npm test` is blocked by execution policy.
 
 Covers the gate logic, score penalty math, DB queries, and retry counter. Claude and Reddit calls are mocked.
 

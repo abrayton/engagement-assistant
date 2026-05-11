@@ -20,6 +20,7 @@ async function loadQueue() {
   let rows;
   try {
     const res = await fetch('/api/queue');
+    if (!res.ok) throw new Error(`queue failed: ${res.status}`);
     rows = await res.json();
   } catch (err) {
     list.innerHTML = `<p class="empty">Error loading queue: ${escapeHtml(err.message)}</p>`;
@@ -117,11 +118,11 @@ function attachCardActions(card, row) {
       // Single click handler — both clipboard write AND window.open before any await
       // (avoids popup blocker by keeping window.open synchronous to the click).
       const text = textarea.value;
-      window.open(row.url, '_blank', 'noopener');
       try {
-        await navigator.clipboard.writeText(text);
+        const copyPromise = navigator.clipboard.writeText(text);
+        window.open(row.url, '_blank', 'noopener');
+        await copyPromise;
       } catch (err) {
-        // Some browsers may block clipboard if window.open fired first; warn user.
         alert('Could not copy to clipboard: ' + err.message + '\nText is in the textarea — copy manually.');
         return;
       }
@@ -216,6 +217,7 @@ async function loadHistory() {
   let rows;
   try {
     const res = await fetch('/api/history');
+    if (!res.ok) throw new Error(`history failed: ${res.status}`);
     rows = await res.json();
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="4">Error: ${escapeHtml(err.message)}</td></tr>`;
@@ -244,7 +246,9 @@ async function loadHistory() {
 async function loadStatus() {
   let s;
   try {
-    s = await (await fetch('/api/status')).json();
+    const res = await fetch('/api/status');
+    if (!res.ok) throw new Error(`status failed: ${res.status}`);
+    s = await res.json();
   } catch (err) {
     document.getElementById('poll-result').textContent = 'Error: ' + err.message;
     return;

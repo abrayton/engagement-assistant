@@ -5,6 +5,8 @@ export async function fetchTopComments(snoowrap, threadId) {
     const submission = await snoowrap.getSubmission(threadId).fetch();
     const comments = submission.comments || [];
     return comments
+      .filter((c) => c && typeof c.body === 'string')
+      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
       .slice(0, 3)
       .map((c) => (c.body || '').slice(0, 150));
   } catch {
@@ -18,7 +20,16 @@ export function createDrafter({ anthropic, snoowrap, db, config, personaPath }) 
       const thread = db.getThreadById(threadId);
       if (!thread) throw new Error(`Thread ${threadId} not found`);
 
-      const persona = readFileSync(personaPath, 'utf8');
+      let persona;
+      try {
+        persona = readFileSync(personaPath, 'utf8');
+      } catch (err) {
+        const newAttempts = thread.attempts + 1;
+        const newStatus = newAttempts >= config.max_retry_attempts ? 'failed' : 'scored';
+        db.incrementAttempts(threadId, `persona: ${err.message}`, newStatus);
+        throw err;
+      }
+
       const recent = db.getRecentPosted(10);
       const topComments = await fetchTopComments(snoowrap, threadId);
 

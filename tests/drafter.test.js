@@ -26,6 +26,23 @@ describe('fetchTopComments', () => {
     expect(result[2].length).toBe(150);
   });
 
+  it('sorts available top-level comments by score before taking 3', async () => {
+    const fakeSubmission = {
+      fetch: vi.fn().mockResolvedValue({
+        comments: [
+          { body: 'low', score: 1 },
+          { body: 'highest', score: 100 },
+          { body: 'middle', score: 50 },
+          { body: 'excluded', score: 0 }
+        ]
+      })
+    };
+    const fakeSnoo = { getSubmission: vi.fn().mockReturnValue(fakeSubmission) };
+
+    const result = await fetchTopComments(fakeSnoo, 't3_a');
+    expect(result).toEqual(['highest', 'middle', 'low']);
+  });
+
   it('returns empty array on fetch failure (drafter falls back to "none yet")', async () => {
     const fakeSnoo = {
       getSubmission: vi.fn().mockReturnValue({
@@ -179,5 +196,30 @@ describe('createDrafter.draftComment', () => {
     const got = db.getThreadById('t3_d');
     expect(got.attempts).toBe(1);
     expect(got.status).toBe('scored');
+  });
+
+  it('persona read failure increments attempts and keeps status=scored', async () => {
+    const db = createDb(':memory:');
+    db.insertThread({
+      id: 't3_e', subreddit: 'webdev', title: 't', body: '', url: 'u',
+      author: 'x', score: 1, comment_count: 0, created_utc: 0,
+      fetched_at: 0, age_hours: 1, matched_strong: '[]', matched_weak: '[]'
+    });
+    db.updateThreadAfterScoring('t3_e', {
+      raw_relevance_score: 8, relevance_score: 8,
+      relevance_reason: 'r', suggested_angle: 'a',
+      high_traffic_flag: 0, status: 'scored'
+    });
+    const anthropic = fakeAnthropic('unused');
+    const drafter = createDrafter({
+      anthropic, snoowrap: fakeSnoo(), db, config: cfg, personaPath: join(tmp, 'missing.md')
+    });
+
+    await expect(drafter.draftComment('t3_e')).rejects.toThrow();
+    const got = db.getThreadById('t3_e');
+    expect(got.attempts).toBe(1);
+    expect(got.status).toBe('scored');
+    expect(got.last_error).toMatch(/^persona:/);
+    expect(anthropic.messages.create).not.toHaveBeenCalled();
   });
 });

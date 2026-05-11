@@ -13,7 +13,16 @@ export function createScorer({ anthropic, db, config, personaPath }) {
       const thread = db.getThreadById(threadId);
       if (!thread) throw new Error(`Thread ${threadId} not found`);
 
-      const persona = readFileSync(personaPath, 'utf8');
+      let persona;
+      try {
+        persona = readFileSync(personaPath, 'utf8');
+      } catch (err) {
+        const newAttempts = thread.attempts + 1;
+        const newStatus = newAttempts >= config.max_retry_attempts ? 'failed' : 'pending';
+        db.incrementAttempts(threadId, `persona: ${err.message}`, newStatus);
+        throw err;
+      }
+
       const systemText = buildScoringSystemPrompt(persona);
       const userText = buildScoringUserPrompt(thread);
 

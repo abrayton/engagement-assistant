@@ -15,7 +15,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "node-cron": "^4.2.1",
-    "snoowrap": "^1.23.0"
+    "snoowrap": "^1.15.2"
   },
   "devDependencies": {
     "vitest": "^4.1.5"
